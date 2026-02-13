@@ -34,6 +34,21 @@
                     @endforeach
                 </select>
             </div>
+            {{-- Project filter from ChatProjects --}}
+            @if($projects->count() > 0)
+            <div class="w-48">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
+                <select name="project_id" 
+                        class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                    <option value="">All Projects</option>
+                    @foreach ($projects as $project)
+                        <option value="{{ $project->id }}" {{ request('project_id') == $project->id ? 'selected' : '' }}>
+                            {{ $project->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
             <button type="submit" 
                     class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition">
                 Filter
@@ -52,6 +67,11 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Epic
                     </th>
+                    @if($projects->count() > 0)
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        Project
+                    </th>
+                    @endif
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Status
                     </th>
@@ -79,6 +99,18 @@
                                 </p>
                             @endif
                         </td>
+                        {{-- Project column from ChatProjects --}}
+                        @if($projects->count() > 0)
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            @if($epic->chatProject)
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                    📁 {{ $epic->chatProject->name }}
+                                </span>
+                            @else
+                                <span class="text-gray-400 text-xs">—</span>
+                            @endif
+                        </td>
+                        @endif
                         <td class="px-6 py-4 whitespace-nowrap">
                             @php
                                 $statusColors = [

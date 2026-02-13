@@ -62,6 +62,21 @@ return [
             ]) : [],
         ],
 
+        // Connection to ChatProjects database for reading project info
+        'chatprojects' => [
+            'driver' => 'pgsql',
+            'host' => env('CHATPROJECTS_DB_HOST', 'host.docker.internal'),
+            'port' => env('CHATPROJECTS_DB_PORT', '5432'),
+            'database' => env('CHATPROJECTS_DB_DATABASE', 'projectsStorage'),
+            'username' => env('CHATPROJECTS_DB_USERNAME', 'manager'),
+            'password' => env('CHATPROJECTS_DB_PASSWORD', 'one'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'prefer',
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

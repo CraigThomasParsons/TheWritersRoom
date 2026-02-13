@@ -15,7 +15,18 @@ class Epic extends Model
         'title',
         'summary',
         'epic_status_id',
+        'chat_project_id',
     ];
+
+    /**
+     * Get the ChatProject this epic belongs to.
+     *
+     * Note: This is a cross-database relationship to ChatProjects.
+     */
+    public function chatProject(): BelongsTo
+    {
+        return $this->belongsTo(ChatProject::class, 'chat_project_id');
+    }
 
     public function status(): BelongsTo
     {

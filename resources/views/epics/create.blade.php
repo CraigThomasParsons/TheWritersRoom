@@ -55,6 +55,33 @@
                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                     @enderror
                 </div>
+
+                {{-- Project selection from ChatProjects --}}
+                @if($projects->count() > 0)
+                <div>
+                    <label for="chat_project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Project
+                    </label>
+                    <select name="chat_project_id" id="chat_project_id"
+                            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        <option value="">-- No Project --</option>
+                        @foreach ($projects as $project)
+                            <option value="{{ $project->id }}" {{ old('chat_project_id') == $project->id ? 'selected' : '' }}>
+                                {{ $project->name }}
+                                @if($project->code_folder)
+                                    ({{ basename($project->code_folder) }})
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="mt-1 text-xs text-gray-500">
+                        Link this epic to a project from projects.elasticgun.com
+                    </p>
+                    @error('chat_project_id')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+                @endif
             </div>
 
             <div class="mt-6 flex justify-end gap-3">
