@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "../ChatProjects"
+		},
+		{
+			"path": "../TheDevBacklog"
+		},
+		{
+			"path": "../TheQAQueue"
+		},
+		{
+			"path": "."
+		},
+		{
+			"path": "../ContextControlledDevelopmentFactory"
+		}
+	],
+	"settings": {}
+}
