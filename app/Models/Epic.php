@@ -19,9 +19,20 @@ class Epic extends Model
     ];
 
     /**
-     * Get the ChatProject this epic belongs to.
+     * Get the project this epic belongs to.
+     * 
+     * This is the local projects table (synced from ChatProjects).
+     */
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'chat_project_id');
+    }
+
+    /**
+     * Get the ChatProject this epic belongs to (cross-database).
      *
      * Note: This is a cross-database relationship to ChatProjects.
+     * Prefer using project() for local queries.
      */
     public function chatProject(): BelongsTo
     {
