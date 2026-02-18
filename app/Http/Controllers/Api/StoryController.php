@@ -13,7 +13,7 @@ class StoryController extends Controller
      */
     public function index()
     {
-        return Story::with(['epic', 'sprint'])->get();
+        return Story::with(['epic', 'sprints'])->get();
     }
 
     /**
@@ -30,7 +30,7 @@ class StoryController extends Controller
 
         $story = Story::create($validated);
 
-        return response()->json($story->load(['epic', 'sprint']), 201);
+        return response()->json($story->load(['epic', 'sprints']), 201);
     }
 
     /**
@@ -38,7 +38,7 @@ class StoryController extends Controller
      */
     public function show(Story $story)
     {
-        return $story->load(['epic', 'sprint']);
+        return $story->load(['epic', 'sprints']);
     }
 
     /**
@@ -55,7 +55,7 @@ class StoryController extends Controller
 
         $story->update($validated);
 
-        return response()->json($story->load(['epic', 'sprint']));
+        return response()->json($story->load(['epic', 'sprints']));
     }
 
     /**

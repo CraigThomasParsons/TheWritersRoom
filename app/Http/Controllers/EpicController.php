@@ -4,14 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Epic;
 use App\Models\EpicStatus;
-use App\Models\ChatProject;
+use App\Models\Project;
 use Illuminate\Http\Request;
 
 /**
  * EpicController handles CRUD operations for epics.
  *
  * Epics group related stories together and can be associated
- * with a project from the ChatProjects system.
+ * with a project (synced locally from ChatProjects API).
  */
 class EpicController extends Controller
 {
@@ -23,7 +23,7 @@ class EpicController extends Controller
     public function index(Request $request)
     {
         // Build query with eager-loaded relationships
-        $query = Epic::with(['status', 'chatProject']);
+        $query = Epic::with(['status', 'project']);
 
         // Filter by search term across title and summary
         if ($request->has('search') && $request->search) {
@@ -90,7 +90,7 @@ class EpicController extends Controller
     public function show(Epic $epic)
     {
         // Eager load relationships for display
-        $epic->load(['status', 'chatProject', 'stories' => function ($query) {
+        $epic->load(['status', 'project', 'stories' => function ($query) {
             $query->with(['status', 'persona'])->orderBy('priority', 'desc');
         }]);
 
@@ -133,19 +133,12 @@ class EpicController extends Controller
     }
 
     /**
-     * Get all projects from the ChatProjects database.
+     * Get all projects from the local database (synced from ChatProjects API).
      *
-     * Returns an empty collection if the connection fails,
-     * allowing the app to work without ChatProjects access.
+     * These are synced via `php artisan ccdf:sync-projects`.
      */
     protected function getProjects()
     {
-        try {
-            return ChatProject::orderBy('name')->get();
-        } catch (\Exception $exception) {
-            // Log the error but don't break the page
-            \Log::warning('Could not connect to ChatProjects: ' . $exception->getMessage());
-            return collect();
-        }
+        return Project::orderBy('name')->get();
     }
 }

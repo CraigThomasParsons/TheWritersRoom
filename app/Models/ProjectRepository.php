@@ -11,6 +11,7 @@ class ProjectRepository extends Model
         'project_id',
         'name',
         'path',
+        'git_repo_url',
         'type',
         'role',
         'display_order',

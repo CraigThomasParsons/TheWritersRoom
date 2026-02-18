@@ -33,7 +33,16 @@ class ChatProject extends Model
      * Note: This model is read-only from TheWritersRoom.
      * Project management is done in ChatProjects app.
      */
-    protected $fillable = ['name', 'description', 'code_folder'];
+    protected $fillable = [
+        'name',
+        'description',
+        'code_folder',
+        'local_location',
+        'github_repo',
+        'gitea_location',
+        'framework_description',
+        'languages',
+    ];
 
     /**
      * Indicates if the model should be timestamped.

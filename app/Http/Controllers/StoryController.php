@@ -77,7 +77,7 @@ class StoryController extends Controller
 
     public function show(Story $story)
     {
-        $story->load(['status', 'epic', 'persona', 'sprints']);
+        $story->load(['status', 'epic', 'persona', 'sprints', 'comments']);
         return view('stories.show', compact('story'));
     }
 
@@ -126,5 +126,23 @@ class StoryController extends Controller
         $story->markReady();
 
         return back()->with('success', 'Story marked as ready.');
+    }
+
+    public function storeComment(Request $request, Story $story)
+    {
+        // Require a message so empty comments never hit the database.
+        $validated = $request->validate([
+            'message' => 'required|string',
+        ]);
+
+        // Default to anonymous until a user system is present.
+        $story->comments()->create([
+            'author_name' => 'Anonymous',
+            'author_type' => 'human',
+            'message' => $validated['message'],
+            'metadata' => null,
+        ]);
+
+        return back()->with('success', 'Comment added.');
     }
 }

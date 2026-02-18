@@ -2,89 +2,221 @@
 
 namespace App\Console\Commands;
 
-use App\Models\ChatProject;
 use App\Models\Project;
+use App\Models\ProjectProjectionSyncEvent;
 use Illuminate\Console\Command;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Carbon;
 
 class SyncProjectsCommand extends Command
 {
-    /**
-     * The name and signature of the console command.
-     */
-    protected $signature = 'ccdf:sync-projects 
-                            {--project= : Sync a specific project by ID}
-                            {--all : Sync all projects}';
+    protected $signature = 'ccdf:sync-projects
+                            {--project= : Sync a specific project by source ID}
+                            {--all : Sync all projects (default behavior)}';
 
-    /**
-     * The console command description.
-     */
-    protected $description = 'Sync projects from ChatProjects to local projects table';
+    protected $description = 'Sync project projection data from the Projects API into local projects table';
 
     /**
      * Execute the console command.
      */
     public function handle(): int
     {
-        $projectId = $this->option('project');
-        $syncAll = $this->option('all');
-
-        if (!$projectId && !$syncAll) {
-            $this->error('Please specify --project=ID or --all');
-            return self::FAILURE;
-        }
-
-        $this->info('Syncing projects from ChatProjects...');
+        $this->info('Syncing projects from Projects API...');
 
         try {
-            if ($projectId) {
-                $this->syncProject($projectId);
-            } else {
-                $this->syncAllProjects();
+            $singleProjectId = $this->option('project');
+            $items = $singleProjectId
+                ? $this->fetchSingleProject((string) $singleProjectId)
+                : $this->fetchAllProjects();
+
+            if ($items === []) {
+                $this->warn('No projects returned from the registry API.');
+                return self::SUCCESS;
             }
 
-            $this->info('✓ Project sync completed');
-            return self::SUCCESS;
+            $createdCount = 0;
+            $updatedCount = 0;
+            $staleCount = 0;
+            $now = now();
 
-        } catch (\Exception $e) {
-            $this->error('Failed to sync: ' . $e->getMessage());
+            foreach ($items as $item) {
+                $projectId = (int) Arr::get($item, 'id');
+
+                if ($projectId <= 0) {
+                    continue;
+                }
+
+                $payload = [
+                    'id' => $projectId,
+                    'project_uuid' => Arr::get($item, 'project_uuid') ?? Arr::get($item, 'uuid'),
+                    'name' => (string) Arr::get($item, 'name', ''),
+                    'description' => Arr::get($item, 'description'),
+                    'code_folder' => Arr::get($item, 'code_folder'),
+                    'local_location' => Arr::get($item, 'local_location'),
+                    'github_repo' => Arr::get($item, 'github_repo'),
+                    'gitea_location' => Arr::get($item, 'gitea_location'),
+                    'framework_description' => Arr::get($item, 'framework_description'),
+                    'languages' => Arr::get($item, 'languages'),
+                    'source_updated_at' => $this->parseNullableTimestamp(Arr::get($item, 'updated_at')),
+                    'deleted_at' => $this->parseNullableTimestamp(Arr::get($item, 'deleted_at')),
+                ];
+
+                $syncEvent = ProjectProjectionSyncEvent::query()->create([
+                    'source' => 'reconciliation',
+                    'event_type' => 'project.upsert',
+                    'project_id' => $projectId,
+                    'project_uuid' => $payload['project_uuid'],
+                    'status' => 'received',
+                    'payload' => $item,
+                    'received_at' => $now,
+                ]);
+
+                try {
+                    $existing = Project::find($projectId);
+                    $syncResult = Project::syncFromRegistry($payload);
+
+                    if ($syncResult['stale']) {
+                        $staleCount++;
+                    }
+
+                    $syncEvent->forceFill([
+                        'status' => $syncResult['stale'] ? 'stale' : 'processed',
+                        'processed_at' => now(),
+                    ])->save();
+
+                    if ($existing === null) {
+                        $createdCount++;
+                    } else {
+                        $updatedCount++;
+                    }
+                } catch (\Throwable $throwable) {
+                    $syncEvent->forceFill([
+                        'status' => 'failed',
+                        'error_message' => $throwable->getMessage(),
+                        'processed_at' => now(),
+                    ])->save();
+
+                    throw $throwable;
+                }
+            }
+
+            $this->info(
+                "✓ Synced " . count($items)
+                . " projects ({$createdCount} created, {$updatedCount} updated, {$staleCount} stale ignored)"
+            );
+
+            return self::SUCCESS;
+        } catch (\Throwable $exception) {
+            $this->error('Failed to sync projects: ' . $exception->getMessage());
             return self::FAILURE;
         }
     }
 
     /**
-     * Sync a single project by ID.
+     * Fetch all projects from the registry API.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    protected function syncProject(int $projectId): void
+    private function fetchAllProjects(): array
     {
-        $chatProject = ChatProject::findOrFail($projectId);
-        
-        $project = Project::syncFromChatProjects([
-            'id' => $chatProject->id,
-            'name' => $chatProject->name,
-            'code_folder' => $chatProject->code_folder,
-            'description' => $chatProject->description ?? null,
-        ]);
+        $baseUrl = rtrim((string) config('services.projects_registry.base_url'), '/');
 
-        $this->line("  Synced: {$project->name} (ID: {$project->id})");
+        if ($baseUrl === '') {
+            throw new \RuntimeException('PROJECTS_API_BASE_URL is not configured.');
+        }
+
+        $allItems = [];
+        $nextUrl = $baseUrl . '/api/projects';
+
+        while ($nextUrl !== null) {
+            $responseData = $this->getJson($nextUrl);
+
+            $items = Arr::get($responseData, 'data');
+            if (! is_array($items)) {
+                // Support non-paginated list endpoints that return top-level arrays.
+                $items = is_array($responseData) && array_is_list($responseData) ? $responseData : [];
+            }
+
+            $allItems = array_merge($allItems, $items);
+
+            $next = Arr::get($responseData, 'links.next') ?? Arr::get($responseData, 'next_page_url');
+            $nextUrl = is_string($next) && trim($next) !== '' ? $next : null;
+        }
+
+        return $allItems;
     }
 
     /**
-     * Sync all projects from ChatProjects.
+     * Fetch a single project from the registry API.
+     *
+     * @return array<int, array<string, mixed>>
      */
-    protected function syncAllProjects(): void
+    private function fetchSingleProject(string $projectId): array
     {
-        $chatProjects = ChatProject::all();
+        $baseUrl = rtrim((string) config('services.projects_registry.base_url'), '/');
 
-        $this->withProgressBar($chatProjects, function ($chatProject) {
-            Project::syncFromChatProjects([
-                'id' => $chatProject->id,
-                'name' => $chatProject->name,
-                'code_folder' => $chatProject->code_folder,
-                'description' => $chatProject->description ?? null,
-            ]);
-        });
+        if ($baseUrl === '') {
+            throw new \RuntimeException('PROJECTS_API_BASE_URL is not configured.');
+        }
 
-        $this->newLine();
-        $this->line("  Synced {$chatProjects->count()} projects");
+        $url = $baseUrl . '/api/projects/' . $projectId;
+        $responseData = $this->getJson($url);
+
+        // Handle single project response wrapped in data key
+        if (isset($responseData['data']) && ! array_is_list($responseData['data'])) {
+            return [$responseData['data']];
+        }
+
+        // Handle raw project object
+        if (isset($responseData['id'])) {
+            return [$responseData];
+        }
+
+        return [];
+    }
+
+    /**
+     * Make a GET request and return JSON decoded response.
+     *
+     * @return array<string, mixed>
+     */
+    private function getJson(string $url): array
+    {
+        $timeout = (int) config('services.projects_registry.timeout_seconds', 15);
+        $token = config('services.projects_registry.token');
+
+        $request = Http::timeout($timeout)
+            ->acceptJson();
+
+        if ($token) {
+            $request = $request->withToken($token);
+        }
+
+        $response = $request->get($url);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException(
+                "Projects API request failed: HTTP {$response->status()} - {$response->body()}"
+            );
+        }
+
+        return $response->json() ?? [];
+    }
+
+    /**
+     * Parse a nullable timestamp string into Carbon or null.
+     */
+    private function parseNullableTimestamp(mixed $value): ?Carbon
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return Carbon::parse($value);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }

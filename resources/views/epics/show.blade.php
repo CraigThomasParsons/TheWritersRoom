@@ -42,14 +42,14 @@
                     <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">{{ $epic->summary }}</p>
                 @endif
 
-                {{-- Display linked ChatProjects project --}}
-                @if ($epic->chatProject)
+                {{-- Display linked project (synced locally from ChatProjects API) --}}
+                @if ($epic->project)
                     <div class="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
                         <p class="text-xs text-purple-600 dark:text-purple-400 uppercase font-medium mb-1">Project</p>
-                        <p class="font-semibold text-purple-800 dark:text-purple-200">📁 {{ $epic->chatProject->name }}</p>
-                        @if ($epic->chatProject->code_folder)
-                            <p class="text-xs text-purple-600 dark:text-purple-400 mt-1 truncate" title="{{ $epic->chatProject->code_folder }}">
-                                {{ basename($epic->chatProject->code_folder) }}
+                        <p class="font-semibold text-purple-800 dark:text-purple-200">📁 {{ $epic->project->name }}</p>
+                        @if ($epic->project->code_folder)
+                            <p class="text-xs text-purple-600 dark:text-purple-400 mt-1 truncate" title="{{ $epic->project->code_folder }}">
+                                {{ basename($epic->project->code_folder) }}
                             </p>
                         @endif
                     </div>

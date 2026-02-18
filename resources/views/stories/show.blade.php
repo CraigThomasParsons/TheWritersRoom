@@ -139,6 +139,48 @@
                 </div>
             @endif
 
+            <!-- Comments -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Comments</h2>
+
+                <form method="POST" action="{{ route('stories.comments.store', $story) }}" class="space-y-3">
+                    @csrf
+                    <label for="message" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Add a comment</label>
+                    <textarea id="message" name="message" rows="3" required
+                              class="block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('message') }}</textarea>
+                    @error('message')
+                        <p class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                    <div>
+                        <button type="submit"
+                                class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700">
+                            Post Comment
+                        </button>
+                    </div>
+                </form>
+
+                <div class="mt-6 space-y-4">
+                    @forelse ($story->comments as $comment)
+                        <div class="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                            <div class="flex items-center justify-between">
+                                <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                    {{ $comment->author_name }}
+                                    <span class="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                                        {{ ucfirst($comment->author_type) }}
+                                    </span>
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    {{ $comment->created_at->diffForHumans() }}
+                                </div>
+                            </div>
+                            <p class="mt-2 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{{ $comment->message }}</p>
+                        </div>
+                    @empty
+                        <p class="text-sm text-gray-500 dark:text-gray-400">No comments yet.</p>
+                    @endforelse
+                </div>
+            </div>
+
             <!-- Ready Checklist -->
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Ready Checklist</h2>

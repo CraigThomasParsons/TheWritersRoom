@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Builder;
 
 class Story extends Model
@@ -47,6 +48,11 @@ class Story extends Model
     {
         return $this->belongsToMany(Sprint::class, 'sprint_stories')
             ->withPivot('sort_order');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(StoryComment::class)->latest();
     }
 
     public function scopeReady(Builder $query): Builder

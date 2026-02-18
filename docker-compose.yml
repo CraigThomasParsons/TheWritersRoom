@@ -17,6 +17,7 @@ services:
       - writersroom
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      - "projects.elasticgun.com:host-gateway"
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -25,6 +26,12 @@ services:
       DB_PASSWORD: secret
       REDIS_HOST: redis
       QUEUE_CONNECTION: redis
+      PIPER_TOKEN: ${PIPER_TOKEN:-}
+      CHATPROJECTS_DB_HOST: ${CHATPROJECTS_DB_HOST:-host.docker.internal}
+      CHATPROJECTS_DB_PORT: ${CHATPROJECTS_DB_PORT:-5434}
+      CHATPROJECTS_DB_DATABASE: ${CHATPROJECTS_DB_DATABASE:-projectsStorage}
+      CHATPROJECTS_DB_USERNAME: ${CHATPROJECTS_DB_USERNAME:-manager}
+      CHATPROJECTS_DB_PASSWORD: ${CHATPROJECTS_DB_PASSWORD:-one}
 
   web:
     image: nginx:alpine
@@ -55,6 +62,9 @@ services:
       - redis
     networks:
       - writersroom
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "projects.elasticgun.com:host-gateway"
     environment:
       DB_HOST: db
       DB_PORT: 3306
@@ -63,6 +73,12 @@ services:
       DB_PASSWORD: secret
       REDIS_HOST: redis
       QUEUE_CONNECTION: redis
+      PIPER_TOKEN: ${PIPER_TOKEN:-}
+      CHATPROJECTS_DB_HOST: ${CHATPROJECTS_DB_HOST:-host.docker.internal}
+      CHATPROJECTS_DB_PORT: ${CHATPROJECTS_DB_PORT:-5434}
+      CHATPROJECTS_DB_DATABASE: ${CHATPROJECTS_DB_DATABASE:-projectsStorage}
+      CHATPROJECTS_DB_USERNAME: ${CHATPROJECTS_DB_USERNAME:-manager}
+      CHATPROJECTS_DB_PASSWORD: ${CHATPROJECTS_DB_PASSWORD:-one}
 
   scheduler:
     build:
@@ -88,6 +104,12 @@ services:
       DB_PASSWORD: secret
       REDIS_HOST: redis
       QUEUE_CONNECTION: redis
+      PIPER_TOKEN: ${PIPER_TOKEN:-}
+      CHATPROJECTS_DB_HOST: ${CHATPROJECTS_DB_HOST:-host.docker.internal}
+      CHATPROJECTS_DB_PORT: ${CHATPROJECTS_DB_PORT:-5434}
+      CHATPROJECTS_DB_DATABASE: ${CHATPROJECTS_DB_DATABASE:-projectsStorage}
+      CHATPROJECTS_DB_USERNAME: ${CHATPROJECTS_DB_USERNAME:-manager}
+      CHATPROJECTS_DB_PASSWORD: ${CHATPROJECTS_DB_PASSWORD:-one}
 
   db:
     image: mysql:8.0

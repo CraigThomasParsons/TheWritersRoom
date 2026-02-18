@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'piper' => [
+        'token' => env('PIPER_TOKEN'),
+    ],
+
+    'project_registry' => [
+        'token' => env('PROJECT_REGISTRY_TOKEN'),
+    ],
+
+    'projects_registry' => [
+        'base_url' => env('PROJECTS_API_BASE_URL', 'http://projects.elasticgun.com'),
+        'token' => env('PROJECTS_API_TOKEN'),
+        'timeout_seconds' => env('PROJECTS_API_TIMEOUT_SECONDS', 15),
+    ],
+
 ];

@@ -56,7 +56,7 @@
                     @enderror
                 </div>
 
-                {{-- Project selection from ChatProjects --}}
+                {{-- Project selection (synced from ChatProjects API) --}}
                 @if($projects->count() > 0)
                 <div>
                     <label for="chat_project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">

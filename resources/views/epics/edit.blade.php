@@ -55,7 +55,7 @@
                     @enderror
                 </div>
 
-                {{-- Project selection from ChatProjects --}}
+                {{-- Project selection (synced from ChatProjects API) --}}
                 @if($projects->count() > 0)
                 <div>
                     <label for="chat_project_id" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -83,27 +83,25 @@
                 @endif
             </div>
 
-            <div class="mt-6 flex justify-between">
-                <form method="POST" action="{{ route('epics.destroy', $epic) }}" 
-                      onsubmit="return confirm('Are you sure? This will also affect stories in this epic.');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm">
-                        Delete Epic
-                    </button>
-                </form>
 
-                <div class="flex gap-3">
-                    <a href="{{ route('epics.index') }}" 
-                       class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
-                        Cancel
-                    </a>
-                    <button type="submit" 
-                            class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                        Update Epic
-                    </button>
-                </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <a href="{{ route('epics.index') }}" 
+                   class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </a>
+                <button type="submit" 
+                        class="px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700 focus:bg-indigo-700 active:bg-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                    Update Epic
+                </button>
             </div>
+        </form>
+
+        <form method="POST" action="{{ route('epics.destroy', $epic) }}" class="mt-6" onsubmit="return confirm('Are you sure? This will also affect stories in this epic.');">
+            @csrf
+            @method('DELETE')
+            <button type="submit" class="text-red-600 hover:text-red-800 text-sm">
+                Delete Epic
+            </button>
         </form>
     </div>
 @endsection

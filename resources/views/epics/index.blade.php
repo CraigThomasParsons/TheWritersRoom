@@ -34,7 +34,7 @@
                     @endforeach
                 </select>
             </div>
-            {{-- Project filter from ChatProjects --}}
+            {{-- Project filter (synced from ChatProjects API) --}}
             @if($projects->count() > 0)
             <div class="w-48">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project</label>
@@ -99,12 +99,12 @@
                                 </p>
                             @endif
                         </td>
-                        {{-- Project column from ChatProjects --}}
+                        {{-- Project column (synced locally from ChatProjects API) --}}
                         @if($projects->count() > 0)
                         <td class="px-6 py-4 whitespace-nowrap">
-                            @if($epic->chatProject)
+                            @if($epic->project)
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                    📁 {{ $epic->chatProject->name }}
+                                    📁 {{ $epic->project->name }}
                                 </span>
                             @else
                                 <span class="text-gray-400 text-xs">—</span>
