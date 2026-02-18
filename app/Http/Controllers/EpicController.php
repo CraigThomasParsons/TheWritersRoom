@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Epic;
 use App\Models\EpicStatus;
 use App\Models\Project;
+use App\Models\StoryStatus;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 /**
  * EpicController handles CRUD operations for epics.
@@ -130,6 +132,83 @@ class EpicController extends Controller
 
         return redirect()->route('epics.index')
             ->with('success', 'Epic deleted successfully.');
+    }
+
+    public function readyForDev(Request $request, Epic $epic)
+    {
+        // Guard clause: Ready status must exist for downstream sync to work.
+        $readyStatus = StoryStatus::byKey('ready');
+        if (! $readyStatus) {
+            return back()->with('error', 'Ready status not found. Seed statuses first.');
+        }
+
+        // Guard clause: Cannot sync an epic with no stories.
+        $storyIds = $epic->stories()->pluck('stories.id');
+        if ($storyIds->isEmpty()) {
+            return back()->with('error', 'Epic has no stories to mark as ready.');
+        }
+
+        // Guard clause: chat project id is required for cross-app sync.
+        if (! $epic->chat_project_id) {
+            return back()->with('error', 'Epic is missing a project id for DevBacklog sync.');
+        }
+
+        // Only update stories that are not already ready to reduce churn.
+        $updatedCount = $epic->stories()
+            ->where('story_status_id', '!=', $readyStatus->id)
+            ->update(['story_status_id' => $readyStatus->id]);
+
+        // Trigger DevBacklog sync after readiness is ensured.
+        $syncResult = $this->syncEpicStoriesToDevBacklog($epic->chat_project_id);
+
+        if (! $syncResult['ok']) {
+            return back()->with('error', $syncResult['message']);
+        }
+
+        return back()->with('success', "Marked {$updatedCount} story(ies) ready and synced to DevBacklog.");
+    }
+
+    protected function syncEpicStoriesToDevBacklog(?int $projectId): array
+    {
+        $baseUrl = config('services.devbacklog.base_url');
+        $token = config('services.devbacklog.token');
+        $timeoutSeconds = (int) config('services.devbacklog.timeout_seconds', 15);
+
+        // Guard clause: missing config should be surfaced explicitly.
+        if (! $baseUrl) {
+            return ['ok' => false, 'message' => 'DevBacklog base URL is not configured.'];
+        }
+
+        // Guard clause: refuse to sync without auth token.
+        if (! $token) {
+            return ['ok' => false, 'message' => 'DevBacklog sync token is not configured.'];
+        }
+
+        $payload = [];
+        if ($projectId) {
+            $payload['project_id'] = $projectId;
+        }
+
+        try {
+            // Use a focused sync endpoint so DevBacklog can pull ready stories for a project.
+            $response = Http::timeout($timeoutSeconds)
+                ->withToken($token)
+                ->post(rtrim($baseUrl, '/') . '/api/stories/sync-ready', $payload);
+
+            if (! $response->successful()) {
+                return [
+                    'ok' => false,
+                    'message' => 'DevBacklog sync failed: ' . $response->body(),
+                ];
+            }
+
+            return ['ok' => true, 'message' => 'DevBacklog sync completed.'];
+        } catch (\Throwable $exception) {
+            return [
+                'ok' => false,
+                'message' => 'DevBacklog sync error: ' . $exception->getMessage(),
+            ];
+        }
     }
 
     /**

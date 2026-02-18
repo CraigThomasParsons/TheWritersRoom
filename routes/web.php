@@ -20,6 +20,8 @@ Route::resource('projects', ProjectController::class)
 
 // Epics
 Route::resource('epics', EpicController::class);
+Route::post('/epics/{epic}/ready-for-dev', [EpicController::class, 'readyForDev'])
+    ->name('epics.ready-for-dev');
 
 // Stories
 Route::resource('stories', StoryController::class);

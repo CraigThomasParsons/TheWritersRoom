@@ -107,6 +107,46 @@ Body example:
 }
 ```
 
+Response includes summary totals and story identifiers:
+
+```json
+{
+  "status": "ok",
+  "project_id": 12,
+  "summary": {
+    "epics_created": 1,
+    "epics_updated": 0,
+    "stories_created": 3,
+    "stories_updated": 0
+  },
+  "story_records": [
+    {
+      "story_id": 55,
+      "story_title": "Persist provider heartbeat",
+      "epic_id": 9,
+      "epic_title": "Reliability Foundation",
+      "was_created": true
+    }
+  ]
+}
+```
+
+### 4) Store Piper comments on a story
+
+`POST /api/piper/stories/{storyId}/comments`
+
+Body example:
+
+```json
+{
+  "message": "I drafted this story under the epic \"Reliability Foundation\".",
+  "metadata": {
+    "run_id": "b7c7f2c3-1eac-46a6-b210-4b02414a18d3",
+    "analysis_id": 33
+  }
+}
+```
+
 ---
 
 ## Required env vars

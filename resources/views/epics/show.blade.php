@@ -19,6 +19,13 @@
             </span>
         </div>
         <div class="flex gap-2">
+            <form method="POST" action="{{ route('epics.ready-for-dev', $epic) }}">
+                @csrf
+                <button type="submit"
+                        class="px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700">
+                    Ready for Dev
+                </button>
+            </form>
             <a href="{{ route('epics.edit', $epic) }}" 
                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
                 Edit

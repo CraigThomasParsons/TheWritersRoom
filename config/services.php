@@ -49,4 +49,10 @@ return [
         'timeout_seconds' => env('PROJECTS_API_TIMEOUT_SECONDS', 15),
     ],
 
+    'devbacklog' => [
+        'base_url' => env('DEVBACKLOG_BASE_URL', 'http://dev.elasticgun.com'),
+        'token' => env('DEVBACKLOG_SYNC_TOKEN'),
+        'timeout_seconds' => env('DEVBACKLOG_TIMEOUT_SECONDS', 20),
+    ],
+
 ];

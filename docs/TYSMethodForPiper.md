@@ -6,13 +6,17 @@ Projects (ChatProjects) → PiperStoryArchitect → TheWritersRoom (Epics + Stor
 
 ## Loop
 
-1. Build one feature/fix.
-2. Test that exact feature/fix.
-3. Did it work?
-   - Yes: move to next feature.
-   - No: fix and return to step 2.
-4. Explain what you did and why in `docs/thoughts.md`.
-5. Go to the next feature/fix.
+1. **Pick one feature/fix** (single, scoped change).
+2. **Implement only that change** (no extra refactors).
+3. **Test that exact change** (smallest test that proves it works).
+4. **Decide**:
+   - Yes: proceed to next feature/fix.
+   - No: fix and re-test the same change.
+5. **Document** in `docs/thoughts.md`:
+   - What was intended
+   - What happened
+   - What was changed
+6. **Repeat** with the next single change.
 
 ## Preflight (before any run)
 
@@ -21,6 +25,14 @@ python3 bin/piper_story_architect.py --config config.json preflight --project-id
 ```
 
 Both endpoints must return 200 or non-blocking status. Fix any auth/schema issues before proceeding.
+
+## Provider Health Check (before any run)
+
+```bash
+python3 bin/piper_story_architect.py --config config.json provider-health
+```
+
+Each enabled provider is probed with a minimal JSON request. Fix credentials or endpoints if any probe fails.
 
 ## Full Run
 
@@ -58,10 +70,25 @@ python3 bin/piper_story_architect.py --config config.json run-project --project-
 ## LLM Failover
 
 Piper tries models in priority order from TheWritersRoom's LLM catalog:
-1. OpenAI models (gpt-5, gpt-4.1, gpt-4o)
-2. Gemini models (gemini-2.5-pro, gemini-2.5-flash)
+1. OpenAI models (Codex-capable, e.g. gpt-5, gpt-4.1, gpt-4o)
+2. Anthropic models (Claude Sonnet class)
+3. Gemini models (gemini-2.5-pro, gemini-2.5-flash)
+4. Grok Code Fast (second-to-last fallback, not yet implemented)
+5. Goose + Local LLMs (last resort, not yet implemented)
 
 Rate limits, quota errors, and 5xx trigger failover to next candidate.
+
+Provider notes:
+- Grok Code Fast requires `xai_api_key` (PiperStoryArchitect config).
+- Goose + Local LLMs require `goose_base_url` and/or `local_llm_base_url`.
+
+## Clear execution method (Piper behavior rule)
+
+1. **Build one behavior** (no batching multiple features).
+2. **Run a targeted test** that proves the behavior works.
+3. **If it fails**, fix the smallest root cause and re-run the same test.
+4. **If it passes**, move to the next behavior.
+5. **Log the work** in `docs/thoughts.md` with intent + result + changes.
 
 ## Regression checks
 

@@ -76,6 +76,18 @@
             </div>
         </nav>
 
+        <!-- Dark Mode Toggle -->
+        <div x-data="{ 
+                darkMode: localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+            }" 
+            x-init="$watch('darkMode', val => { localStorage.setItem('theme', val ? 'dark' : 'light'); document.documentElement.classList.toggle('dark', val); }); document.documentElement.classList.toggle('dark', darkMode);"
+            class="fixed top-4 right-4 z-50 flex items-center space-x-2 bg-white dark:bg-gray-800 p-2 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+            <button @click="darkMode = !darkMode" type="button" class="text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 rounded-lg text-sm p-2.5">
+                <span x-show="darkMode">🌙</span>
+                <span x-show="!darkMode">☀️</span>
+            </button>
+        </div>
+
         <!-- Page Header -->
         @hasSection('header')
         <header class="bg-white dark:bg-gray-800 shadow">

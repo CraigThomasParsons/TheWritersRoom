@@ -1,5 +1,143 @@
 # Thoughts Log: Projects → Piper → WritersRoom
 
+## 2026-02-18: Shared story comments + Piper thought delivery
+
+### Why
+
+- Piper should only do what a human can already do in the UI.
+- We needed a shared comment stream so Piper thoughts appear as ticket comments.
+
+### What changed
+
+1. **Story comments table + model** — Added `story_comments` with `author_name`, `author_type`, `message`, and optional `metadata`.
+2. **Human comment UI** — Story show page now includes a comment form and lists comments in reverse chronological order.
+3. **Piper API comment endpoint** — Added `POST /api/piper/stories/{storyId}/comments` so Piper can write into the same comment stream.
+4. **Story ID echo in generation response** — `POST /api/piper/projects/{projectId}/epics-stories` now returns `story_records` so Piper can attach comments to the correct tickets.
+5. **Documentation updates** — Updated `piper_story_architect_api.md` and `TYSMethodForPiper.md` (LLM failover).
+
+### Files touched
+
+| File | Change |
+| --- | --- |
+| `TheWritersRoom/database/migrations/2026_02_17_180000_create_story_comments_table.php` | New story comments table |
+| `TheWritersRoom/app/Models/StoryComment.php` | New model |
+| `TheWritersRoom/app/Models/Story.php` | `comments()` relationship |
+| `TheWritersRoom/app/Http/Controllers/StoryController.php` | Load + store human comments |
+| `TheWritersRoom/resources/views/stories/show.blade.php` | Comment form + list |
+| `TheWritersRoom/app/Http/Controllers/Api/PiperController.php` | Piper comment endpoint + `story_records` response |
+| `TheWritersRoom/routes/api.php` | Piper comments route |
+| `TheWritersRoom/routes/web.php` | Story comments route |
+| `TheWritersRoom/docs/piper_story_architect_api.md` | Response + comment endpoint |
+| `TheWritersRoom/docs/TYSMethodForPiper.md` | LLM failover list |
+
+## 2026-02-18: LLM catalog expanded for Grok + Goose/Local
+
+### Why
+
+- Implemented the Grok Code Fast and Goose/Local fallbacks, so the catalog needs entries.
+
+### What changed
+
+1. **LLM catalog seed update** — Added xAI Grok Code Fast, Goose Local, and Local LLM models (disabled by default).
+
+### Files touched
+
+| File | Change |
+| --- | --- |
+| `TheWritersRoom/database/seeders/LlmModelSeeder.php` | Added xAI + Goose + Local models |
+
+## 2026-02-18: Added provider health check command
+
+### Why
+
+- Needed a fast, explicit probe for enabled models before full runs.
+
+### What changed
+
+1. **Provider health command** — `provider-health` now probes each enabled model candidate.
+2. **Docs updated** — TYSMethod includes the provider health step.
+
+### What happened during testing
+
+- Provider health check failed for OpenAI and Gemini Pro due to quota limits.
+- Gemini Flash responded successfully, so it remains the only viable provider for now.
+
+## 2026-02-18: Project 4 / Conversation 7 run (Piper)
+
+### What happened
+
+- Preflight succeeded for ChatProjects and TheWritersRoom.
+- Piper generated epics and stories successfully via Gemini Flash.
+- Piper failed to write comments because `story_comments` table is missing in the container.
+
+### Action needed
+
+- Run `php artisan migrate` inside the WritersRoom container, then re-run Piper to publish comments.
+
+### Follow-up
+
+- Migration was applied, but the next run failed on another malformed JSON response.
+- Added a brace-balanced JSON extractor to Piper to harden parsing.
+
+### Latest run
+
+- After migration + JSON fix, Piper completed the run and published story comments successfully.
+
+## 2026-02-18: Epic "Ready for Dev" button
+
+### Why
+
+- Epic drafts in DevBacklog only appear after a sync.
+- Writers need a one-click way to mark an epic ready and push it to DevBacklog.
+
+### What changed
+
+1. **Ready for Dev action** — Epic view now has a button that marks all child stories as ready.
+2. **DevBacklog sync trigger** — WritersRoom calls a DevBacklog API endpoint to sync ready stories.
+3. **Sync endpoint** — DevBacklog exposes `POST /api/stories/sync-ready` to run `ccdf:sync-stories`.
+
+### Config required
+
+- WritersRoom `.env`: `DEVBACKLOG_BASE_URL`, `DEVBACKLOG_SYNC_TOKEN`
+- DevBacklog `.env`: `DEVBACKLOG_SYNC_TOKEN`
+
+### Files touched
+
+| File | Change |
+| --- | --- |
+| `TheWritersRoom/app/Http/Controllers/EpicController.php` | Ready-for-dev action + sync call |
+| `TheWritersRoom/resources/views/epics/show.blade.php` | Ready for Dev button |
+| `TheWritersRoom/routes/web.php` | Ready-for-dev route |
+| `TheWritersRoom/config/services.php` | DevBacklog config |
+| `TheDevBacklog/app/Http/Controllers/Api/StoryController.php` | Sync-ready endpoint |
+| `TheDevBacklog/routes/api.php` | Sync-ready route |
+| `TheDevBacklog/config/services.php` | Sync token config |
+
+### Bug fix after first live run
+
+- DevBacklog sync crashed with `Attempt to read property "id" on null` in `SyncStoriesCommand::syncEpic`.
+- Root cause: local `epic_statuses` can be missing, and sync code dereferenced a null status.
+- Fix: added guard clause in sync command to fail with a clear message when epic statuses are missing, and passed a resolved status id into `syncEpic()` to avoid null dereference.
+
+### Bug fix after duplicate epic report
+
+- DevBacklog Epic Drafts showed duplicate rows for the same epic title/project.
+- Root cause: story sync could create parallel epic rows over time and never reconcile duplicates.
+- Fix: changed epic sync matching to prefer `(chat_project_id, title)` and added a consolidation pass that re-links stories to one canonical epic and deletes duplicates.
+- Validation: running `ccdf:sync-stories --project=4` reported `Consolidated 5 duplicate epic record(s)` and the epic drafts page rendered one row for the affected epic.
+
+### Bug fix after sprint visibility report
+
+- Moving an epic draft to sprint could appear "missing" from Current Sprint and filtered Sprint views.
+- Root cause: move flow created new sprints in `draft` status, while Current Sprint prioritizes `active` and users often filter Sprints by active.
+- Fix: `Move to Sprint` now creates sprints with status precedence `active -> ready -> draft`.
+
+### Bug fix after sprint update/delete regression
+
+- In DevBacklog, clicking `Update Sprint` could delete the sprint.
+- Root cause: `sprints/edit.blade.php` had nested forms (update form wrapping delete form), causing invalid HTML form submission behavior.
+- Fix: separated delete action into its own form (`sprint-delete-form`) and wired delete button using `form=` attribute.
+
 ## 2026-02-17: First successful end-to-end run
 
 ### What was the test
