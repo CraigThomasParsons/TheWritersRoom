@@ -11,9 +11,12 @@ class Sprint extends Model
 {
     use HasFactory;
 
+    protected $appends = ['status'];
+
     protected $fillable = [
         'title',
         'goal',
+        'status',
         'success_criteria',
         'sprint_status_id',
         'is_frozen',
@@ -24,6 +27,30 @@ class Sprint extends Model
         'is_frozen' => 'boolean',
         'frozen_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Sprint $sprint): void {
+            if (! $sprint->sprint_status_id) {
+                $sprint->sprint_status_id = SprintStatus::query()->firstOrCreate(
+                    ['key' => 'draft'],
+                    ['name' => 'Draft']
+                )->id;
+            }
+        });
+
+        static::updating(function ($sprint) {
+            if ($sprint->getOriginal('is_frozen') && ! $sprint->isDirty('sprint_status_id')) {
+                // Allow status changes but block other field changes on frozen sprints
+                $protectedFields = ['title', 'goal', 'success_criteria'];
+                foreach ($protectedFields as $field) {
+                    if ($sprint->isDirty($field)) {
+                        throw new \Exception('Cannot modify a frozen sprint. Sprint context is immutable.');
+                    }
+                }
+            }
+        });
+    }
 
     public function status(): BelongsTo
     {
@@ -69,21 +96,27 @@ class Sprint extends Model
         return $this->stories->count();
     }
 
-    protected static function boot()
+    public function getStatusAttribute(): string
     {
-        parent::boot();
+        if ($this->relationLoaded('status') && $this->getRelation('status')) {
+            return $this->getRelation('status')->key;
+        }
 
-        static::updating(function ($sprint) {
-            if ($sprint->getOriginal('is_frozen') && !$sprint->isDirty('sprint_status_id')) {
-                // Allow status changes but block other field changes on frozen sprints
-                $protectedFields = ['title', 'goal', 'success_criteria'];
-                foreach ($protectedFields as $field) {
-                    if ($sprint->isDirty($field)) {
-                        throw new \Exception('Cannot modify a frozen sprint. Sprint context is immutable.');
-                    }
-                }
-            }
-        });
+        return SprintStatus::query()->whereKey($this->sprint_status_id)->value('key') ?? 'draft';
+    }
+
+    public function setStatusAttribute(?string $value): void
+    {
+        if (! $value) {
+            return;
+        }
+
+        $status = SprintStatus::query()->firstOrCreate(
+            ['key' => $value],
+            ['name' => ucfirst($value)]
+        );
+
+        $this->attributes['sprint_status_id'] = $status->id;
     }
 
     public function toSpecMarkdown(): string
