@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -11,8 +12,11 @@ class Epic extends Model
 {
     use HasFactory;
 
+    protected $appends = ['description'];
+
     protected $fillable = [
         'title',
+        'description',
         'summary',
         'epic_status_id',
         'chat_project_id',
@@ -66,5 +70,25 @@ class Epic extends Model
         $total = $this->story_count;
         if ($total === 0) return 0;
         return (int) round(($this->done_story_count / $total) * 100);
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Epic $epic): void {
+            if (! $epic->epic_status_id) {
+                $epic->epic_status_id = EpicStatus::query()->firstOrCreate(
+                    ['key' => 'backlog'],
+                    ['name' => 'Backlog']
+                )->id;
+            }
+        });
+    }
+
+    protected function description(): Attribute
+    {
+        return Attribute::make(
+            get: fn (): ?string => $this->summary,
+            set: fn (?string $value): array => ['summary' => $value]
+        );
     }
 }

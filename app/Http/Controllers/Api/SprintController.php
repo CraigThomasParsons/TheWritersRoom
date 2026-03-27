@@ -60,6 +60,7 @@ class SprintController extends Controller
         $sprint->update($validated);
 
         if ($oldStatus !== 'ready' && $sprint->status === 'ready') {
+            $sprint->freeze();
             event(new SprintReady($sprint));
         }
 

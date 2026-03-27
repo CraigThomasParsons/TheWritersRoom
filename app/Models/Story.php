@@ -13,11 +13,17 @@ class Story extends Model
 {
     use HasFactory;
 
+    protected $appends = ['description', 'sprint_id', 'sprint'];
+
+    protected ?int $pendingSprintId = null;
+
     protected $fillable = [
         'title',
+        'description',
         'narrative',
         'acceptance_criteria',
         'epic_id',
+        'sprint_id',
         'persona_id',
         'story_status_id',
         'priority',
@@ -28,6 +34,25 @@ class Story extends Model
         'priority' => 'integer',
         'est_points' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Story $story): void {
+            if (! $story->story_status_id) {
+                $story->story_status_id = StoryStatus::query()->firstOrCreate(
+                    ['key' => 'draft'],
+                    ['name' => 'Draft']
+                )->id;
+            }
+        });
+
+        static::saved(function (Story $story): void {
+            if ($story->pendingSprintId !== null) {
+                $story->sprints()->sync([$story->pendingSprintId => ['sort_order' => 0]]);
+                $story->pendingSprintId = null;
+            }
+        });
+    }
 
     public function epic(): BelongsTo
     {
@@ -48,6 +73,35 @@ class Story extends Model
     {
         return $this->belongsToMany(Sprint::class, 'sprint_stories')
             ->withPivot('sort_order');
+    }
+
+    public function getSprintAttribute(): ?Sprint
+    {
+        if ($this->relationLoaded('sprints')) {
+            return $this->sprints->first();
+        }
+
+        return $this->sprints()->first();
+    }
+
+    public function getSprintIdAttribute(): ?int
+    {
+        return $this->sprint?->id;
+    }
+
+    public function setSprintIdAttribute(int|string|null $value): void
+    {
+        $this->pendingSprintId = $value !== null ? (int) $value : null;
+    }
+
+    public function getDescriptionAttribute(): ?string
+    {
+        return $this->narrative;
+    }
+
+    public function setDescriptionAttribute(?string $value): void
+    {
+        $this->attributes['narrative'] = $value ?? '';
     }
 
     public function comments(): HasMany
@@ -72,14 +126,14 @@ class Story extends Model
 
     public function isReady(): bool
     {
-        return !empty($this->title) 
-            && !empty($this->narrative) 
+        return ! empty($this->title)
+            && ! empty($this->narrative)
             && !empty($this->acceptance_criteria);
     }
 
     public function markReady(): bool
     {
-        if (!$this->isReady()) {
+        if (! $this->isReady()) {
             return false;
         }
 
