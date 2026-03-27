@@ -13,3 +13,9 @@ Schedule::command('ccdf:sync-projects --all')
     ->everyFifteenMinutes()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Natively execute any throttled OpenClaw codebase generation jobs (or other failed items)
+Schedule::command('queue:work --stop-when-empty')
+    ->dailyAt('02:00')
+    ->withoutOverlapping()
+    ->runInBackground();
