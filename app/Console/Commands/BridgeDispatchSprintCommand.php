@@ -7,6 +7,13 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * BridgeDispatchSprintCommand is responsible for packaging the sprint context into a structured JSON payload and placing it in the ISBD outbox directory.
+ * This command is typically triggered when a sprint transitions to 'ready' status, signaling that it's primed for development.
+ * The payload includes sprint details, associated stories, and their linked epics, formatted according to the schema expected by Tess/Mason in the CCDF ecosystem.
+ * Additionally, it checks for codebase paths tied to the sprint's stories and can trigger an OpenClaw initialization if no codebase exists, ensuring that
+ * the development environment is prepared for the incoming sprint context. Finally, it signals the venv python daemon to ping RabbitMQ, activating the delivery route to CCDF immediately.
+ */
 class BridgeDispatchSprintCommand extends Command
 {
     /**
@@ -18,6 +25,8 @@ class BridgeDispatchSprintCommand extends Command
 
     /**
      * The console command description.
+     * ISBD = Inception and Story Bridge to Dev. This command is the final step in the sprint orchestration process, packaging the sprint context and signaling the ISBD architecture to trigger delivery.
+     * CCDF = ChatGPT to ChatProjects Bridge, the internal name for the ISBD consumer service in the CCDF ecosystem.
      *
      * @var string
      */
@@ -30,20 +39,26 @@ class BridgeDispatchSprintCommand extends Command
     {
         $sprintId = $this->argument('sprint_id');
         $sprint = Sprint::with(['stories.epic', 'stories.status', 'stories.persona'])->find($sprintId);
+        $strStatusName = '';
 
         if (!$sprint) {
             $this->error("Sprint {$sprintId} not found.");
             return 1;
         }
 
-        if (strtolower($sprint->status->name ?? '') !== 'ready') {
+        if ($sprint->status && $sprint->status->name) {
+            $strStatusName = strtolower($sprint->status->name);
+        }
+
+        // Only allow dispatching if the sprint is in 'ready' status to prevent premature execution. This ensures that all sprint context is finalized before delivery.
+        if ($strStatusName !== 'ready') {
             $this->warn("Sprint {$sprintId} is not in 'ready' status. Dispatch aborted to prevent premature execution.");
             return 0;
         }
 
         $this->info("Dispatching Sprint {$sprintId} ({$sprint->title}) to CCDF...");
 
-        // Construct the expected ISBD JSON payload structure
+        // Construct the expected Inception and Story Bridge to Dev JSON payload structure
         $codebasesResult = $this->extractUniqueCodebases($sprint);
         
         if ($codebasesResult['requires_openclaw_initialization'] && !empty($codebasesResult['paths'])) {
